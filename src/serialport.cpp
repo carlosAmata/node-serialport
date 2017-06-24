@@ -6,6 +6,8 @@
   #include "./read-poller.h"
 #endif
 
+// fprintf(stdout, "LOADED num=%d str=%s\n", 4, "hi")
+
 v8::Local<v8::Value> getValueFromObject(v8::Local<v8::Object> options, std::string key) {
   v8::Local<v8::String> v8str = Nan::New<v8::String>(key).ToLocalChecked();
   return Nan::Get(options, v8str).ToLocalChecked();
@@ -173,6 +175,7 @@ NAN_METHOD(Write) {
     return;
   }
 
+  fprintf(stdout, "writing %lu bytes\n", bufferLength);
   WriteBaton* baton = new WriteBaton();
   memset(baton, 0, sizeof(WriteBaton));
   baton->fd = fd;
@@ -189,26 +192,78 @@ NAN_METHOD(Write) {
 }
 
 void EIO_AfterWrite(uv_work_t* req) {
+  fprintf(stdout, "back from write\n");
   Nan::HandleScope scope;
-  WriteBaton* data = static_cast<WriteBaton*>(req->data);
+  WriteBaton* baton = static_cast<WriteBaton*>(req->data);
+  delete req;
 
-  v8::Local<v8::Value> argv[1];
-  if (data->errorString[0]) {
-    argv[0] = v8::Exception::Error(Nan::New<v8::String>(data->errorString).ToLocalChecked());
-  } else {
-    argv[0] = Nan::Null();
+
+  // If there's no error and there's still data to write, lets poll
+  if (!baton->errorString[0] && baton->offset < baton->bufferLength) {
+    fprintf(stdout, "starting poller\n");
+    uv_poll_t* poll_handle = new uv_poll_t();
+    memset(poll_handle, 0, sizeof(uv_poll_t));
+    poll_handle->data = baton;
+    int status = uv_poll_init(uv_default_loop(), poll_handle, baton->fd);
+    if (0 != status) {
+      strncpy(baton->errorString, uv_strerror(status), sizeof(baton->errorString));
+      EIO_WriteEnd(baton);
+      return;
+    }
+    status = uv_poll_start(poll_handle, UV_WRITABLE | UV_DISCONNECT, EIO_AfterWritePoll);
+    if (0 != status) {
+      strncpy(baton->errorString, uv_strerror(status), sizeof(baton->errorString));
+      EIO_WriteEnd(baton);
+      return;
+    }
+    return;
   }
 
-  // If there's no error and there's still data to write, lets keep trying
-  // TODO: Add a uv_poll here for unix
-  if (!data->errorString[0] && data->offset < data->bufferLength) {
+  EIO_WriteEnd(baton);
+}
+
+void EIO_AfterWritePoll(uv_poll_t *poll_handle, int status, int events) {
+  fprintf(stdout, "back from poll\n");
+  Nan::HandleScope scope;
+  uv_poll_stop(poll_handle);
+
+  WriteBaton* baton = static_cast<WriteBaton*>(poll_handle->data);
+  delete poll_handle;
+
+  // lets try the write again now that we're writable and no errors detected
+  if (status == 0 && events == UV_WRITABLE) {
+    fprintf(stdout, "WRITABLE now writing %lu bytes\n", baton->bufferLength - baton->offset);
+    uv_work_t* req = new uv_work_t();
+    req->data = baton;
     uv_queue_work(uv_default_loop(), req, EIO_Write, (uv_after_work_cb)EIO_AfterWrite);
     return;
   }
 
-  data->callback.Call(1, argv);
-  delete data;
-  delete req;
+  // Must be an error or disconnect
+  if (status != 0) {
+    fprintf(stdout, "BAD STATUS num=%d str=%s\n", status, uv_strerror(status));
+    strncpy(baton->errorString, uv_strerror(status), sizeof(baton->errorString));
+  } else if (events == UV_DISCONNECT) {
+    fprintf(stdout, "Disconnect num=%d\n", UV_DISCONNECT);
+    strncpy(baton->errorString, "UV_DISCONNECT", sizeof(baton->errorString));
+  } else {
+    fprintf(stdout, "unknown error or event\n");
+    strncpy(baton->errorString, "Unknown Error", sizeof(baton->errorString));
+  }
+  EIO_WriteEnd(baton);
+}
+
+void EIO_WriteEnd(WriteBaton *baton) {
+  v8::Local<v8::Value> argv[1];
+  if (baton->errorString[0]) {
+    fprintf(stdout, "write error\n");
+    argv[0] = v8::Exception::Error(Nan::New<v8::String>(baton->errorString).ToLocalChecked());
+  } else {
+    fprintf(stdout, "write finished\n");
+    argv[0] = Nan::Null();
+  }
+  baton->callback.Call(1, argv);
+  delete baton;
 }
 
 #ifdef WIN32

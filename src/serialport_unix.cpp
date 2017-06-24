@@ -337,13 +337,13 @@ void EIO_Write(uv_work_t* req) {
 
     // Try again in another event loop
     if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
-      return;
+      break;
     }
 
     // EBAD would mean we're "disconnected"
     // a real error so lets bail
     snprintf(data->errorString, sizeof(data->errorString), "Error: %s, calling write", strerror(errno));
-    return;
+    break;
   } while (data->bufferLength > data->offset);
 }
 

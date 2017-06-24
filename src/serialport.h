@@ -22,9 +22,23 @@ NAN_METHOD(Update);
 void EIO_Update(uv_work_t* req);
 void EIO_AfterUpdate(uv_work_t* req);
 
+struct WriteBaton {
+  int fd;
+  char* bufferData;
+  size_t bufferLength;
+  size_t offset;
+  Nan::Persistent<v8::Object> buffer;
+  Nan::Callback callback;
+  int result;
+  char errorString[ERROR_STRING_SIZE];
+  uv_poll_t poll_handle_;
+};
+
 NAN_METHOD(Write);
 void EIO_Write(uv_work_t* req);
 void EIO_AfterWrite(uv_work_t* req);
+void EIO_AfterWritePoll(uv_poll_t *poll_handle, int status, int events);
+void EIO_WriteEnd(WriteBaton *baton);
 
 #ifdef WIN32
 NAN_METHOD(Read);
@@ -97,17 +111,6 @@ struct ConnectionOptionsBaton {
   Nan::Callback callback;
   int fd;
   int baudRate;
-};
-
-struct WriteBaton {
-  int fd;
-  char* bufferData;
-  size_t bufferLength;
-  size_t offset;
-  Nan::Persistent<v8::Object> buffer;
-  Nan::Callback callback;
-  int result;
-  char errorString[ERROR_STRING_SIZE];
 };
 
 #ifdef WIN32
