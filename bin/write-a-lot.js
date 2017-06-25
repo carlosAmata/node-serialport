@@ -29,8 +29,8 @@ findArduino().then((portName) => {
   const port = new SerialPort(portName);
   port.on('open', () => {
     console.log('opened', portName);
-    port.write(Buffer.alloc(1024 * 20, 0));
-    port.on('data', () => {}); // put the port into flowing mode
+    // port.write(Buffer.alloc(1024 * 20, 0));
+    port.on('data', data => console.log('data', data.toString())); // put the port into flowing mode
     // setTimeout(() => {
     //   console.log('closing');
     //   port.close((err) => {

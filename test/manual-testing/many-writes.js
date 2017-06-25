@@ -103,7 +103,7 @@ findArduino()
     console.log('delaying 3 seconds');
     return Promise.delay(3000, port);
   })
-  .then(writeAllCommands)
+  .then(writeAllCommands) // broken?
   // .then(writeOneCommandAtATime)
   // .then(writeAndDrain)
   .then((port) => {

@@ -29,8 +29,10 @@ const repl = require('repl');
 // const { promirepl } = require('promirepl')
 
 findArduino().then((portName) => {
-  const port = new SerialPort(portName);
+  const port = new SerialPort(portName, { autoOpen: false });
   const spRepl = repl.start({ prompt: '> ' });
+  spRepl.context.SerialPort = SerialPort;
+  spRepl.context.portName = portName;
   spRepl.context.port = port;
 });
 
