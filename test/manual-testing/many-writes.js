@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars,require-path-exists/exists */
+/* eslint-disable */
 'use strict';
 
 const SerialPort = require('../../');
