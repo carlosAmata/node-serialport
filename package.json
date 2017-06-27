@@ -12,7 +12,7 @@
     "module_path": "build/{configuration}/",
     "host": "https://github.com/EmergingTechnologyAdvisors/node-serialport/releases/download/5.0.0-beta5"
   },
-  "main": "./lib",
+  "main": "lib",
   "repository": {
     "type": "git",
     "url": "git://github.com/EmergingTechnologyAdvisors/node-serialport.git"

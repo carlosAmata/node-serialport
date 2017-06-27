@@ -15,7 +15,6 @@
     "ecmaVersion": 2017
   },
   "rules": {
-    "arrow-parens": [2, "as-needed"],
     "no-unused-vars": [2, { "vars": "all", "args": "after-used" }],
     "no-var": 2,
     "no-process-exit": 0,
