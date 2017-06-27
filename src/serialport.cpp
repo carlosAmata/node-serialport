@@ -149,6 +149,7 @@ void EIO_AfterUpdate(uv_work_t* req) {
   delete req;
 }
 
+#ifdef WIN32
 NAN_METHOD(Write) {
   // file descriptor
   if (!info[0]->IsInt32()) {
@@ -274,6 +275,7 @@ void EIO_AfterRead(uv_work_t* req) {
   baton->callback.Call(2, argv);
   delete baton;
 }
+#endif
 
 NAN_METHOD(Close) {
   // file descriptor
@@ -605,8 +607,10 @@ extern "C" {
     Nan::SetMethod(target, "get", Get);
     Nan::SetMethod(target, "open", Open);
     Nan::SetMethod(target, "update", Update);
+    #ifdef WIN32
     Nan::SetMethod(target, "write", Write);
     Nan::SetMethod(target, "read", Read);
+    #endif
     Nan::SetMethod(target, "close", Close);
     Nan::SetMethod(target, "list", List);
     Nan::SetMethod(target, "flush", Flush);

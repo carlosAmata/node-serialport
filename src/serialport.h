@@ -22,6 +22,7 @@ NAN_METHOD(Update);
 void EIO_Update(uv_work_t* req);
 void EIO_AfterUpdate(uv_work_t* req);
 
+#ifdef WIN32
 struct WriteBaton {
   int fd;
   char* bufferData;
@@ -52,6 +53,7 @@ struct ReadBaton {
 NAN_METHOD(Read);
 void EIO_Read(uv_work_t* req);
 void EIO_AfterRead(uv_work_t* req);
+#endif
 
 NAN_METHOD(Close);
 void EIO_Close(uv_work_t* req);

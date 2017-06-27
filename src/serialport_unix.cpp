@@ -322,64 +322,6 @@ int setup(int fd, OpenBaton *data) {
   return 1;
 }
 
-void EIO_Write(uv_work_t* req) {
-  WriteBaton* data = static_cast<WriteBaton*>(req->data);
-  ssize_t bytesWritten = 0;
-
-  while (data->bufferLength > data->offset) {
-    errno = 0;  // probably don't need this
-    bytesWritten = write(data->fd, data->bufferData + data->offset, data->bufferLength - data->offset);
-    if (-1 != bytesWritten) {
-      // there wasn't an error, do the math on what we actually wrote and keep writing until finished
-      data->offset += bytesWritten;
-      continue;
-    }
-
-    // Try again after polling
-    if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
-      break;
-    }
-
-    // EBAD would mean we're "disconnected"
-    // a real error so lets bail
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, calling write", strerror(errno));
-    break;
-  };
-  data->bytesWritten = bytesWritten;
-}
-
-void EIO_Read(uv_work_t* req) {
-  ReadBaton* data = static_cast<ReadBaton*>(req->data);
-  ssize_t bytesRead = 0;
-
-  while (data->bytesToRead > 0) {
-    errno = 0;  // probably don't need this
-    bytesRead = read(data->fd, data->bufferData + data->offset, data->bytesToRead);
-    if (bytesRead > 0) {
-      // there wasn't an error, do the math on what we actually wrote and keep reading until finished
-      data->offset += bytesRead;
-      data->bytesRead += bytesRead;
-      data->bytesToRead -= bytesRead;
-      continue;
-    }
-
-    // EOF probably shouldn't be an error
-    if (0 == bytesRead) {
-      strncpy(data->errorString, "EOF", sizeof(data->errorString));
-      break;
-    }
-
-    // Try again after later
-    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-      break;
-    }
-
-    // a real error so lets bail
-    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, calling write", strerror(errno));
-    break;
-  };
-}
-
 void EIO_Close(uv_work_t* req) {
   VoidBaton* data = static_cast<VoidBaton*>(req->data);
 
