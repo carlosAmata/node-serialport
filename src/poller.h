@@ -7,10 +7,11 @@ class Poller : public Nan::ObjectWrap {
  public:
   static NAN_MODULE_INIT(Init);
   static void onData(uv_poll_t* handle, int status, int events);
+  static void onClose(uv_handle_t* poll_handle);
 
  private:
   int fd;
-  uv_poll_t poll_handle;
+  uv_poll_t* poll_handle;
   Nan::Callback callback;
   bool uv_poll_init_success = false;
 

@@ -4,6 +4,8 @@
 Poller::Poller(int fd) {
   Nan::HandleScope scope;
   this->fd = fd;
+  this->poll_handle = new uv_poll_t();
+  memset(this->poll_handle, 0, sizeof(uv_poll_t));
   poll_handle.data = this;
   int status = uv_poll_init(uv_default_loop(), &poll_handle, fd);
   if (0 != status) {
@@ -14,29 +16,22 @@ Poller::Poller(int fd) {
 }
 
 Poller::~Poller() {
-  // fprintf(stdout, "~Poller is gone\n");
+  fprintf(stdout, "~Poller going away\n");
   // if we call uv_poll_stop after uv_poll_init failed we segfault
   if (uv_poll_init_success) {
-    uv_poll_stop(&poll_handle);
+    fprintf(stdout, "~Poller being stopped\n");
+    uv_poll_stop(poll_handle);
+    fprintf(stdout, "~Poller being closed\n");
+    uv_close((uv_handle_t*) poll_handle, Poller::onClose);
+  } else {
+    delete poll_handle;
   }
-  // should ensure uv_close has been called somehow
 }
 
-// void Poller::close() {
-//   Nan::HandleScope scope;
-//   if (!info[0]->IsFunction()) {
-//     Nan::ThrowTypeError("cb must be a function");
-//     return;
-//   }
-//   stop();
-//   obj.closeCallback.Reset(info[0].As<v8::Function>());
-
-//   uv_close(&poll_handle, Poller::onClose)
-// }
-
-// void Poller::onClose(uv_poll_t* handle) {
-
-// }
+void Poller::onClose(uv_handle_t* poll_handle) {
+  fprintf(stdout, "~Poller is closed\n");
+  delete poll_handle;
+}
 
 // Events can be UV_READABLE | UV_WRITABLE | UV_DISCONNECT
 void Poller::poll(int events) {
